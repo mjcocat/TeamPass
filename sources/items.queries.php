@@ -397,6 +397,16 @@ if ( isset($_POST['type']) ){
             	//get readable list of restriction
             	$list_of_restricted = "";
             	if(!empty($data_received['restricted_to'])){
+            		//get readable list of previous restriction
+            		$list_of_old_restricted = "";
+           			foreach(explode(';', $data['restricted_to']) as $user_rest){
+           				if(!empty($user_rest)){
+           					$data_tmp = $db->query_first("SELECT login FROM ".$pre."users WHERE id= ".$user_rest);
+           					if(empty($list_of_old_restricted)) $list_of_old_restricted = $data_tmp['login'];
+           					else $list_of_old_restricted .= ";".$data_tmp['login'];
+           				}
+           			}
+            		//new list
             		foreach(explode(';', $data_received['restricted_to']) as $user_rest){
             			if(!empty($user_rest)){
             				$data_tmp = $db->query_first("SELECT login FROM ".$pre."users WHERE id= ".$user_rest);
@@ -513,6 +523,19 @@ if ( isset($_POST['type']) ){
                             )
                         );
                     }
+	            	/*RESTRICTED_TO */
+	            	if ( $data['restricted_to'] != $data_received['restricted_to'] ){
+	            		$db->query_insert(
+		            		'log_items',
+		            		array(
+		            		    'id_item' => $data_received['id'],
+		            		    'date' => mktime(date('H'),date('i'),date('s'),date('m'),date('d'),date('y')),
+		            		    'id_user' => $_SESSION['user_id'],
+		            		    'action' => 'at_modification',
+		            		    'raison' => 'at_restricted_to : '.$list_of_old_restricted.' => '.$list_of_restricted
+		            		)
+	            		);
+	            	}
 
                 //Reload new values
                 $data_item = $db->query_first("

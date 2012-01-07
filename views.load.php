@@ -196,7 +196,7 @@ function generate_renewal_pdf(){
 
 
 $(function() {
-	$("#tabs").tabs();
+	$("#tabs").tabs({"selected":$("#tab_to_open").val()});
     $("#log_jours").datepicker({
         regional: 'fr',
         dateFormat : 'dd/mm/yy'

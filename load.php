@@ -30,7 +30,11 @@ $htmlHeaders = '
 
 		<script language="JavaScript" type="text/javascript" src="includes/libraries/simplePassMeter/simplePassMeter.js"></script>
 
-        <script type="text/javascript" src="includes/libraries/crypt/aes.min.js"></script>';
+        <script type="text/javascript" src="includes/libraries/crypt/aes.min.js"></script>
+
+		<script type="text/javascript" src="includes/libraries/jmenu/jmenu_min.js"></script>
+		<link rel="stylesheet" type="text/css" href="includes/libraries/jmenu/jmenu.css"  media="screen" />
+		';
 
 
 
@@ -109,15 +113,20 @@ $htmlHeaders .= '
 <script type="text/javascript">
 <!-- // --><![CDATA[
     //deconnexion
-    function MenuAction(val){
+    function MenuAction(val, options){
         if ( val == "deconnexion" ) {
             $("#menu_action").val(val);
             document.main_form.submit();
         }
         else {
         	$("#menu_action").val("action");
-            if ( val == "") document.location.href="index.php";
-            else document.location.href="index.php?page="+val;
+            if ( val == ""){
+            	if(options) document.location.href="index.php?"+options;
+            	else document.location.href="index.php";
+            }else{
+            	if(options) document.location.href="index.php?page="+val+"&"+options;
+            	else document.location.href="index.php?page="+val;
+            }
         }
     }
 
@@ -214,7 +223,178 @@ $htmlHeaders .= '
 		}
 	});*/
 
-    $(function() {
+    $(function() {';
+		if(isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])){
+			$htmlHeaders .= '
+    	//MENU
+    	$("#menubar").menubar({
+	        items: [
+			{
+				name: "<img src=\"includes/images/menu_personal.png\" alt=\"\" />&nbsp;'.$txt['home_personal_menu'].'",
+				attr: { id: "menu_but_actions" },
+				items: [
+					{
+						name: "<img src=\"includes/images/home.png\" alt=\"\" />&nbsp;'.$txt['home'].'",
+						selecton: function(){ $(location).attr(\'href\',\'index.php\'); },
+						attr: { id: "menu_home" }
+					},
+					{
+						name: "<img src=\"includes/images/menu_change_pw.png\" alt=\"\" />&nbsp;'.$txt['index_change_pw'].'",
+						selecton: function(){ MenuAction(\'\', \'action=change_my_password\'); },	//
+						attr: { id: "menu_change_pw" }
+					},
+					{
+						name: "<img src=\"includes/images/menu_import.png\" alt=\"\" />&nbsp;'.$txt['import_csv_menu_title'].'",
+						selecton: function(){MenuAction(\'\', \'action=import_items\'); },
+						attr: { id: "menu_import" }
+					},';
+					if(isset($_SESSION['settings']['allow_print']) && $_SESSION['settings']['allow_print'] == 1){
+						$htmlHeaders .= '
+					{
+						name: "<img src=\"includes/images/menu_print.png\" alt=\"\" />&nbsp;'.$txt['print_out_menu_title'].'",
+						selecton: function(){ print_out_items(); },
+						attr: { id: "menu_print" }
+					},';
+					}
+					$htmlHeaders .= '
+					{
+						name: "<img src=\"includes/images/menu_increase_session.png\" alt=\"\" />&nbsp;'.$txt['index_add_one_hour'].'",
+						selecton: function(){ IncreaseSessionTime() },
+						attr: { id: "menu_increase_session" }
+					}
+				]
+			},
+			{
+				name: "<img src=\"includes/images/menu_items.png\" alt=\"\" />&nbsp;'.$txt['pw'].'",
+				attr: { id: "menu_but_items" },
+				items: [
+					{
+						name: "<img src=\"includes/images/menu_key.png\" alt=\"\" />&nbsp;'.$txt['pw'].'",
+						selecton: function(){ MenuAction(\'items\'); },
+						attr: { id: "menu_items" }
+					},
+					{
+						name: "<img src=\"includes/images/binocular.png\" alt=\"\" />&nbsp;'.$txt['find'].'",
+						selecton: function(){ MenuAction(\'find\'); },
+						attr: { id: "menu_find" }
+					},';
+					if(isset($_SESSION['settings']['enable_kb']) && $_SESSION['settings']['enable_kb'] == 1){
+						$htmlHeaders .= '
+					{
+						name: "<img src=\"includes/images/menu_favourite.png\" alt=\"\" />&nbsp;'.$txt['my_favourites'].'",
+						selecton: function(){ MenuAction(\'favourites\'); },
+						attr: { id: "menu_favourite" }
+					},';
+					}
+					$htmlHeaders .= '
+					{
+						name: "<img src=\"includes/images/tag_blue.png\" alt=\"\" />&nbsp;'.$txt['last_items_icon_title'].'",
+						selecton: function(){ OpenDiv(\'div_last_items\') },
+						attr: { id: "menu_last_items" }
+					}
+				]
+			},';
+			if(isset($_SESSION['settings']['enable_kb']) && $_SESSION['settings']['enable_kb'] == 1){
+				$htmlHeaders .= '
+			{
+				name: "<img src=\"includes/images/direction.png\" alt=\"\" />&nbsp;'.$txt['kb_menu'].'",
+				selecton: function(){ MenuAction(\'kb\'); },
+				attr: { id: "menu_kb" }
+			},';
+			}
+			if($_SESSION['user_admin'] == 1 || $_SESSION['user_gestionnaire'] == 1){
+				$htmlHeaders .= '
+			{
+				name: "<img src=\"includes/images/menu_admin.png\" alt=\"\" />&nbsp;'.$txt['admin'].'",
+				attr: { id: "menu_but_admin" },
+				items: [';
+					if($_SESSION['user_admin'] == 1){
+						$htmlHeaders .= '
+					{
+						name: "<img src=\"includes/images/menu_informations.png\" alt=\"\" />&nbsp;'.$txt['admin_main'].'",
+						selecton: function(){ MenuAction(\'manage_main\'); },
+						attr: { id: "menu_info" }
+					},
+					{
+						name: "<img src=\"includes/images/menu_settings.png\" alt=\"\" />&nbsp;'.$txt['admin_settings'].'",
+						selecton: function(){ MenuAction(\'manage_settings\'); },
+						attr: { id: "menu_settings" },
+						items :[
+							{
+								name: "'.$txt['admin_settings_title'].'",
+								selecton: function(){ MenuAction(\'manage_settings\', \'tab=0\'); }
+							},
+							{
+								name: "'.$txt['admin_misc_title'].'",
+								selecton: function(){ MenuAction(\'manage_settings\', \'tab=1\'); }
+							},
+							{
+								name: "'.$txt['admin_actions_title'].'",
+								selecton: function(){ MenuAction(\'manage_settings\', \'tab=2\'); }
+							},
+							{
+								name: "'.$txt['admin_ldap_menu'].'",
+								selecton: function(){ MenuAction(\'manage_settings\', \'tab=3\'); }
+							},
+							{
+								name: "'.$txt['admin_backups'].'",
+								selecton: function(){ MenuAction(\'manage_settings\', \'tab=4\'); }
+							}
+						]
+					},';
+					}
+					$htmlHeaders .= '
+					{
+						name: "<img src=\"includes/images/menu_groups.png\" alt=\"\" />&nbsp;'.$txt['admin_groups'].'",
+						selecton: function(){ MenuAction(\'manage_folders\'); },
+						attr: { id: "menu_folders" }
+					},
+					{
+						name: "<img src=\"includes/images/menu_functions.png\" alt=\"\" />&nbsp;'.$txt['admin_functions'].'",
+						selecton: function(){ MenuAction(\'manage_roles\'); },
+						attr: { id: "menu_roles" }
+					},
+					{
+						name: "<img src=\"includes/images/menu_user.png\" alt=\"\" />&nbsp;'.$txt['admin_users'].'",
+						selecton: function(){ MenuAction(\'manage_users\') },
+						attr: { id: "menu_users" }
+					},
+					{
+						name: "<img src=\"includes/images/menu_views.png\" alt=\"\" />&nbsp;'.$txt['admin_views'].'",
+						selecton: function(){ MenuAction(\'manage_views\'); },
+						attr: { id: "menu_views" },
+						items :[
+							{
+								name: "'.$txt['logs_passwords'].'",
+								selecton: function(){ MenuAction(\'manage_views\', \'tab=0\'); }
+							},
+							{
+								name: "'.$txt['deletion'].'",
+								selecton: function(){ MenuAction(\'manage_views\', \'tab=1\'); }
+							},
+							{
+								name: "'.$txt['logs'].'",
+								selecton: function(){ MenuAction(\'manage_views\', \'tab=2\'); }
+							},
+							{
+								name: "'.$txt['renewal_menu'].'",
+								selecton: function(){ MenuAction(\'manage_views\', \'tab=3\'); }
+							}
+						]
+					}
+				]
+			},';
+			}
+			$htmlHeaders .= '
+			{
+				name: "<img src=\"includes/images/menu_disconnect.png\" alt=\"\" />&nbsp;'.$txt['disconnect'].'",
+				selecton: function(){ MenuAction(\'deconnexion\'); }
+			}
+		]
+		});';
+		}
+
+		$htmlHeaders .= '
         //TOOLTIPS
         $("#main *, #footer *, #icon_last_items *, #top *, button, .tip").tooltip({
             delay: 0,
@@ -595,6 +775,13 @@ if ( !isset($_GET['page']) ){
 				//
 			}
 		);
+
+		//In case of action asked by user
+		if($("#launch_action").val() == "change_my_password"){
+			OpenDialogBox(\'div_changer_mdp\');
+		}else if($("#launch_action").val() == "import_items"){
+			$(\'#div_import_from_csv\').dialog(\'open\');
+		}
     })
 
     function ChangeMyPass(){
@@ -898,7 +1085,8 @@ if ( isset($_GET['page']) && $_GET['page'] == "manage_settings" ){
 		        	$("#save_button").show();
         		}
         		return true;
-			}
+			},
+			"selected":$("#tab_to_open").val()
 		});
 
         //BUILD BUTTONS

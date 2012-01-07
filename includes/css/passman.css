@@ -26,6 +26,7 @@ background-image: url(../images/canevas/menu_top_bckg.png);
     margin-right: 5px;
     margin-top: -5px;
 	margin-left: -5px;
+	cursor: pointer;
 }
 
 #menu_top{
@@ -276,3 +277,7 @@ cursor: pointer;
 .meterWarn .simplePassMeterIcon { background-position: 0 -51px; }
 
 .simplePassMeterText { margin-left: 2px; }
+
+.menu{
+	display:none;
+}

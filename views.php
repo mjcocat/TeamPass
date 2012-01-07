@@ -14,6 +14,10 @@
 
 if (!isset($_SESSION['CPM'] ) || $_SESSION['CPM'] != 1)
 	die('Hacking attempt...');
+
+echo '
+<input type="hidden" id="tab_to_open" value="', isset($_GET['tab']) ? $_GET['tab'] : '0','" />';
+
 //Load file
 require_once ("views.load.php");
 

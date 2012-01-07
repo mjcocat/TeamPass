@@ -99,83 +99,14 @@ require_once("load.php");
     /* HEADER */
     echo '
     <div id="top">
-        <div id="logo"><img src="includes/images/canevas/logo.png" alt="" /></div>';
+        <div id="logo"><img src="includes/images/canevas/logo.png" alt="" onclick="MenuAction(\'\');" /></div>';
 
         //Display menu
         if (isset($_SESSION['login'])) {
             echo '
         <div id="menu_top">
-            <div style="font-size:12px; margin-left:65px; margin-top:-5px; width:100%; color:white;">
+            <div style="font-size:12px; margin-left:65px; margin-top:8px; width:100%; color:white;">
                 <img src="includes/images/user-black.png" /> <b>'.$_SESSION['login'].'</b> ['.$_SESSION['user_privilege'].']<img src="includes/images/alarm-clock.png" style="margin-left:30px;" /> '.$txt['index_expiration_in'].' <div style="display:inline;" id="countdown"></div>
-            </div>
-            <div style="margin-left:65px; margin-top:3px;width:100%;" id="main_menu">
-                <button title="'.$txt['home'].'" onclick="MenuAction(\'\');">
-                    <img src="includes/images/home.png" alt="" />
-                </button>
-                <button style="margin-left:10px;" title="'.$txt['pw'].'" onclick="MenuAction(\'items\');"', (isset($_SESSION['nb_folders']) && $_SESSION['nb_folders'] == 0) || (isset($_SESSION['nb_roles']) && $_SESSION['nb_roles'] == 0) ? ' disabled="disabled"' : '', '>
-                    <img src="includes/images/menu_key.png" alt="" />
-                </button>
-                <button title="'.$txt['find'].'" onclick="MenuAction(\'find\');"', (isset($_SESSION['nb_folders']) && $_SESSION['nb_folders'] == 0) || (isset($_SESSION['nb_roles']) && $_SESSION['nb_roles'] == 0) ? ' disabled="disabled"' : '', '>
-                    <img src="includes/images/binocular.png" alt="" />
-                </button>
-                <button title="'.$txt['last_items_icon_title'].'" onclick="OpenDiv(\'div_last_items\')">
-                    <img src="includes/images/tag_blue.png" alt="" />
-                </button>';
-
-                // Favourites menu
-	        	if (isset($_SESSION['settings']['enable_favourites']) && $_SESSION['settings']['enable_favourites'] == 1) {
-	        		echo '
-                <button title="'.$txt['my_favourites'].'" onclick="MenuAction(\'favourites\');">
-                    <img src="includes/images/favourite.png" alt="" />
-                </button>';
-	        	}
-
-	        	// KB menu
-	        	if (isset($_SESSION['settings']['enable_kb']) && $_SESSION['settings']['enable_kb'] == 1) {
-	        		echo '
-	                <button style="margin-left:10px;" title="'.$txt['kb_menu'].'" onclick="MenuAction(\'kb\');">
-	                    <img src="includes/images/direction.png" alt="" />
-	                </button>';
-	        	}
-
-                //Admin menu
-	        	if ($_SESSION['user_admin'] == 1) {
-	        		echo '
-                <button style="margin-left:10px;" title="'.$txt['admin_main'].'" onclick="MenuAction(\'manage_main\');">
-                    <img src="includes/images/menu_informations.png" alt="" />
-                </button>
-                <button title="'.$txt['admin_settings'].'" onclick="MenuAction(\'manage_settings\');">
-                    <img src="includes/images/menu_settings.png" alt="" />
-                </button>';
-	        	}
-
-	        	if ($_SESSION['user_admin'] == 1 || $_SESSION['user_gestionnaire'] == 1) {
-	        		echo '
-                <button title="'.$txt['admin_groups'].'" onclick="MenuAction(\'manage_folders\');">
-                    <img src="includes/images/menu_groups.png" alt="" />
-                </button>
-                <button title="'.$txt['admin_functions'].'" onclick="MenuAction(\'manage_roles\');">
-                    <img src="includes/images/menu_functions.png" alt="" />
-                </button>
-                <button title="'.$txt['admin_users'].'" onclick="MenuAction(\'manage_users\');">
-                    <img src="includes/images/menu_user.png" alt="" />
-                </button>
-                <button title="'.$txt['admin_views'].'" onclick="MenuAction(\'manage_views\');">
-                    <img src="includes/images/menu_views.png" alt="" />
-                </button>';
-	        	}
-
-                //1 hour
-                echo '
-                <button style="margin-left:10px;" title="'.$txt['index_add_one_hour'].'" onclick="IncreaseSessionTime();">
-                    <img src="includes/images/clock__plus.png" alt="" />
-                </button>';
-
-                //Disconnect menu
-                echo '
-                <button title="'.$txt['disconnect'].'" onclick="MenuAction(\'deconnexion\');">
-                    <img src="includes/images/door-open.png" alt="" />
-                </button>
             </div>
         </div>';
         }
@@ -192,7 +123,8 @@ require_once("load.php");
                 </dd>
             </dl>
         </div>
-    </div>';
+    </div>
+    <div id="menubar"></div>';
 
 
     /* LAST SEEN */
@@ -207,6 +139,8 @@ require_once("load.php");
             	}
             }
         }else echo $txt['no_last_items'];
+    	echo '
+		<span style="float:right;"><img src="includes/images/cross-white.png" style="cursor:pointer;" alt="" onclick="OpenDiv(\'div_last_items\');" /></span>';
     echo '
     </div>';
 
@@ -216,6 +150,7 @@ require_once("load.php");
         <input type="text" style="display:none;" id="temps_restant" value="', isset($_SESSION['fin_session']) ? $_SESSION['fin_session'] : '', '" />
         <input type="hidden" name="language" id="language" value="" />
         <input type="hidden" name="user_pw_complexity" id="user_pw_complexity" value="'.@$_SESSION['user_pw_complexity'].'" />
+        <input type="hidden" name="launch_action" id="launch_action" value="', isset($_GET['action']) ? $_GET['action'] : '','" />
     </form>';
 
 
@@ -500,7 +435,6 @@ require_once("load.php");
         <div style="float:right;margin-top:5px;text-align:right;">
         </div>
     </div>';
-
 
     //PAGE LOADING
     echo '

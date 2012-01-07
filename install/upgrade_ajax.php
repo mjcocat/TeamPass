@@ -112,10 +112,29 @@ if ( isset($_POST['type']) ){
 			$db_password = str_replace(" ","+",urldecode($_POST['db_password']));
 			// connexion
 			if ( @mysql_connect($_POST['db_host'],$_POST['db_login'],$db_password) ){
-				if ( @mysql_select_db($_POST['db_bdd']) ){
+				$db_tmp = mysql_connect($_POST['db_host'], $_POST['db_login'], $db_password);
+				if ( @mysql_select_db($_POST['db_bdd'],$db_tmp) ){
 					echo 'gauge.modify($("pbar"),{values:[0.50,1]});';
 					$res = "Connection is successfull";
 					echo 'document.getElementById("but_next").disabled = "";';
+
+					//What CPM version
+					if(@mysql_query("SELECT valeur FROM ".$_POST['tbl_prefix']."misc WHERE type='admin' AND intitule = 'cpassman_version'")){
+						$tmp_result = mysql_query("SELECT valeur FROM ".$_POST['tbl_prefix']."misc WHERE type='admin' AND intitule = 'cpassman_version'");
+						$cpm_version = mysql_fetch_row($tmp_result);
+						echo 'document.getElementById("actual_cpm_version").value = "'.$cpm_version[0].'";';
+					}else{
+						$res = "Table ".$_POST['tbl_prefix']."misc do not exists!";
+					}
+
+					//Get some infos from DB
+					if(@mysql_fetch_row(mysql_query("SELECT valeur FROM ".$_POST['tbl_prefix']."misc WHERE type='admin' AND intitule = 'utf8_enabled'"))){
+						$cpm_is_utf8 = mysql_fetch_row(mysql_query("SELECT valeur FROM ".$_POST['tbl_prefix']."misc WHERE type='admin' AND intitule = 'utf8_enabled'"));
+						echo 'document.getElementById("cpm_is_utf8").value = "'.$cpm_is_utf8[0].'";';
+						$_SESSION['utf8_enabled'] = $cpm_is_utf8[0];
+					}else{
+						$res = "Table ".$_POST['tbl_prefix']."misc do not exists!";
+					}
 				}else{
 					echo 'gauge.modify($("pbar"),{values:[0.50,1]});';
 					$res = "Impossible to get connected to table";
@@ -126,18 +145,6 @@ if ( isset($_POST['type']) ){
 				$res = "Impossible to get connected to server";
 				echo 'document.getElementById("but_next").disabled = "disabled";';
 			}
-
-			//What CPM version
-			$db_tmp = mysql_connect($_POST['db_host'], $_POST['db_login'], $db_password);
-			mysql_select_db($_POST['db_bdd'],$db_tmp);
-			$tmp_result = mysql_query("SELECT valeur FROM ".$_POST['tbl_prefix']."misc WHERE type='admin' AND intitule = 'cpassman_version'") or die(mysql_error());
-			$cpm_version = mysql_fetch_row($tmp_result);
-			echo 'document.getElementById("actual_cpm_version").value = "'.$cpm_version[0].'";';
-
-			//Get some infos from DB
-			$cpm_is_utf8 = mysql_fetch_row(mysql_query("SELECT valeur FROM ".$_POST['tbl_prefix']."misc WHERE type='admin' AND intitule = 'utf8_enabled'"));
-			echo 'document.getElementById("cpm_is_utf8").value = "'.$cpm_is_utf8[0].'";';
-			$_SESSION['utf8_enabled'] = $cpm_is_utf8[0];
 
 			echo 'document.getElementById("res_step2").innerHTML = "'.$res.'";';
 			echo 'document.getElementById("loader").style.display = "none";';
@@ -642,7 +649,7 @@ if ( isset($_POST['type']) ){
 				echo 'document.getElementById("tbl_16").innerHTML = "<img src=\"images/tick.png\">";';
 			}else{
 				echo 'document.getElementById("res_step4").innerHTML = "An error appears on table LANGUAGES!";';
-				echo 'document.getElementById("tbl_13").innerHTML = "<img src=\"images/exclamation-red.png\">";';
+				echo 'document.getElementById("tbl_16").innerHTML = "<img src=\"images/exclamation-red.png\">";';
 				echo 'document.getElementById("loader").style.display = "none";';
 				mysql_close($db_tmp);
 				break;
@@ -676,7 +683,7 @@ if ( isset($_POST['type']) ){
 				while ($tmp_data = mysql_fetch_array($tmp_res)) {
 					$reason = explode(':',$tmp_data['raison']);
 					$text = AesCtr::encrypt(trim($reason[1]), $_SESSION['key'], 256);
-					mysql_query("UPDATE ".$pre."log_items SET raison = 'at_pw : ".$text."' WHERE id_item = ".$tmp_data['id_item']." AND date = ".$tmp_data['date']." AND id_user = ".$tmp_data['id_user']." AND action = ".$tmp_data['action']) or die(mysql_error());
+					mysql_query("UPDATE ".$pre."log_items SET raison = 'at_pw : ".$text."' WHERE id_item = ".$tmp_data['id_item']." AND date = ".$tmp_data['date']." AND id_user = ".$tmp_data['id_user']." AND action = '".$tmp_data['action']."'") or die(mysql_error());
 				}
 				mysql_query("INSERT INTO `".$_SESSION['tbl_prefix']."misc` VALUES ('update', 'encrypt_pw_in_log_items',1)");
 			}
