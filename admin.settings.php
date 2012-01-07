@@ -300,6 +300,7 @@ if (isset($_POST['save_button'])) {
 }
 
 echo '
+<input type="hidden" id="tab_to_open" value="', isset($_GET['tab']) ? $_GET['tab'] : '0','" />
 <div style="margin-top:10px;">
     <form name="form_settings" method="post" action="">';
         // Main div for TABS
