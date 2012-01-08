@@ -208,7 +208,7 @@ jQuery.fn.reverse = [].reverse;
                         maxWidth = Math.max( maxWidth, $(this).outerWidth() );
                     }).width(maxWidth*1.05);
 
-                    $(this).css("height", $(this).height());
+                    $(this).css("height", $(this).height()*0.8);
 
                     if( ! $(this).parent().hasClass("ui-menu-title") ) {
                         $(this).css( "left", $(this).parent().outerWidth() );

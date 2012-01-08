@@ -33,7 +33,7 @@ border-left !important: transparent solid 1px;
 }
 
 .ui-menu-bar .ui-menu-nav {
-	padding: 0.25em;
+	padding: 0.05em;
 }
 
 .ui-menu-bar .ui-top-menu {
@@ -68,12 +68,12 @@ border-left !important: transparent solid 1px;
 }
 
 .ui-menu-bar .ui-top-menu label {
-	padding-top: 0.25em;
-	padding-bottom: 0.25em;
+	padding-top: 0.5em;
+	padding-bottom: 0.5em;
 }
 
 .ui-menu-bar .ui-menu-title label {
-	padding: .4em 1em;
+	padding: .1em 1em;
 	display: inline-block;
 }
 

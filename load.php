@@ -239,13 +239,21 @@ $htmlHeaders .= '
 						attr: { id: "menu_home" }
 					},
 					{
-						name: "<img src=\"includes/images/menu_change_pw.png\" alt=\"\" />&nbsp;'.$txt['index_change_pw'].'",
-						selecton: function(){ MenuAction(\'\', \'action=change_my_password\'); },	//
+						name: "<img src=\"includes/images/menu_change_pw.png\" alt=\"\" />&nbsp;'.$txt['index_change_pw'].'",';
+						if(!isset($_GET['page'])) $htmlHeaders .= '
+						selecton: function(){ OpenDialogBox(\'div_changer_mdp\'); },';
+						else $htmlHeaders .= '
+						selecton: function(){ MenuAction(\'\', \'action=change_my_password\'); },';
+						$htmlHeaders .= '
 						attr: { id: "menu_change_pw" }
 					},
 					{
-						name: "<img src=\"includes/images/menu_import.png\" alt=\"\" />&nbsp;'.$txt['import_csv_menu_title'].'",
-						selecton: function(){MenuAction(\'\', \'action=import_items\'); },
+						name: "<img src=\"includes/images/menu_import.png\" alt=\"\" />&nbsp;'.$txt['import_csv_menu_title'].'",';
+						if(!isset($_GET['page'])) $htmlHeaders .= '
+						selecton: function(){ $(\'#div_import_from_csv\').dialog(\'open\'); },';
+						else $htmlHeaders .= '
+						selecton: function(){ MenuAction(\'\', \'action=import_items\'); },';
+						$htmlHeaders .= '
 						attr: { id: "menu_import" }
 					},';
 					if(isset($_SESSION['settings']['allow_print']) && $_SESSION['settings']['allow_print'] == 1){
