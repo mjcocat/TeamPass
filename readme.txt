@@ -79,6 +79,7 @@ LANGUAGES:
 ------------------------------------------  CHANGELOG  ----------------------------------------------
 V2.2
 - add new menu
+- 2 bugs correction (v2.1.1)
 
 v2.1
 * Licence has changed to GNU AFFERO GPL 3.0
