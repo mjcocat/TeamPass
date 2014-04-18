@@ -13,8 +13,20 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-if (!isset($_SESSION['CPM']) || $_SESSION['CPM'] != 1) {
+if (
+    !isset($_SESSION['CPM']) || $_SESSION['CPM'] != 1 || 
+    !isset($_SESSION['user_id']) || empty($_SESSION['user_id']) || 
+    !isset($_SESSION['key']) || empty($_SESSION['key'])) 
+{
     die('Hacking attempt...');
+}
+
+/* do checks */
+require_once $_SESSION['settings']['cpassman_dir'].'/sources/checks.php';
+if (!checkUser($_SESSION['user_id'], $_SESSION['key'], curPage())) {
+    $_SESSION['error']['code'] = ERR_NOT_ALLOWED; //not allowed page
+    include 'error.php';
+    exit();
 }
 
 require_once $_SESSION['settings']['cpassman_dir'].'/sources/SplClassLoader.php';
@@ -63,11 +75,16 @@ echo '
                     <th title="'.$txt['gestionnaire'].'"><img src="includes/images/user-worker.png" /></th>
                     <th title="'.$txt['read_only_account'].'"><img src="includes/images/user_read_only.png" /></th>
                     <th title="'.$txt['can_create_root_folder'].'"><img src="includes/images/folder-network.png" /></th>
-                    ', (isset($_SESSION['settings']['enable_pf_feature']) && $_SESSION['settings']['enable_pf_feature'] == 1) ? '<th title="'.$txt['enable_personal_folder'].'"><img src="includes/images/folder-open-document-text.png" /></th>' : '', '
+                    ', (isset($_SESSION['settings']['enable_pf_feature']) && $_SESSION['settings']['enable_pf_feature'] == 1) ?
+                    	'<th title="'.$txt['enable_personal_folder'].'"><img src="includes/images/folder-open-document-text.png" /></th>' : ''
+                    ,'
                     <th title="'.$txt['user_action'].'"><img src="includes/images/user-locked.png" /></th>
                     <th title="'.$txt['pw_change'].'"><img src="includes/images/lock__pencil.png" /></th>
                     <th title="'.$txt['email_change'].'"><img src="includes/images/mail.png" /></th>
                     <th title="'.$txt['logs'].'"><img src="includes/images/log.png" /></th>
+					', (isset($_SESSION['settings']['2factors_authentication']) && $_SESSION['settings']['2factors_authentication'] == 1) ?
+                    	'<th title="'.$txt['send_ga_code'].'"><img src="includes/images/phone.png" /></th>':''
+                	,'
                 </tr>
             </thead>
             <tbody>';
@@ -267,13 +284,24 @@ foreach ($rows as $reccord) {
         if ($showUserFolders != true) {
             echo '<img src="includes/images/mail--pencil_disabled.png" />';
         } else {
-            echo '<img src="includes/images/', empty($reccord['email']) ? 'mail--exclamation.png':'mail--pencil.png', '" onclick="mail_user(\''.$reccord['id'].'\',\''.addslashes($reccord['email']).'\')" class="button" style="padding:2px;" title="'.$reccord['email'].'"', ' />';
+            echo '<img id="useremail_'.$reccord['id'].'" src="includes/images/', empty($reccord['email']) ? 'mail--exclamation.png':'mail--pencil.png', '" onclick="mail_user(\''.$reccord['id'].'\',\''.addslashes($reccord['email']).'\')" class="button" style="padding:2px;" title="'.$reccord['email'].'"', ' />';
         }
+    	echo '
+                    </td>';
+    	// Log reports
         echo '
-                    </td>
                     <td align="center">
                         &nbsp;<img ', ($showUserFolders != true) ? 'src="includes/images/report_disabled.png"':'src="includes/images/report.png" onclick="user_action_log_items(\''.$reccord['id'].'\')" class="button" style="padding:2px;" title="'.$txt['see_logs'].'"', ' />
-                    </td>
+                    </td>';
+    	// GA code
+    	if (isset($_SESSION['settings']['2factors_authentication']) && $_SESSION['settings']['2factors_authentication'] == 1) {
+    		echo '
+					<td>
+						&nbsp;<img src="includes/images/', empty($reccord['ga']) ? 'phone_add' : 'phone_sound' ,'.png" onclick="user_action_ga_code(\''.$reccord['id'].'\')" class="button" style="padding:2px;" title="'.$txt['user_ga_code'].'" />
+					</td>';
+    	}
+    	// end
+    	echo '
                 </tr>';
         $x++;
     }
@@ -424,7 +452,7 @@ echo '
 // USER MANAGER
 echo '
 <div id="manager_dialog" style="display:none;">
-    <div style="text-align:center;padding:2px;display:none;" class="ui-state-error ui-corner-all" id="manager_dialog_error"></div>
+    <div style="text-align:center;padding:2px;" class="ui-state-error ui-corner-all" id="manager_dialog_error"></div>
 </div>';
 
 /*// MIGRATE PERSONAL ITEMS FROM ADMIN TO A USER

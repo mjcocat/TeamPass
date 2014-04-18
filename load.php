@@ -155,7 +155,7 @@ $htmlHeaders .= '
             "sources/main.queries.php",
             {
                 type : "identify_user",
-                data : aes_encrypt(data)
+                data : prepareExchangedData(data, "encode")
             },
             function(data) {
                 if (data[0].value == randomstring) {
@@ -234,11 +234,13 @@ $htmlHeaders .= '
     function GenerateNewPassword(key, login)
     {
         $("#ajax_loader_send_mail").show();
+        // prepare data
+        data = \'{"login":"\'+sanitizeString(login)+\'" ,\'+
+            \'"key":"\'+sanitizeString(key)+\'"}\';
         //send query
         $.post("sources/main.queries.php", {
                 type :    "generate_new_password",
-                login:    login,
-                key :    key
+    		    data : prepareExchangedData(data, "encode")
             },
             function(data) {
                 if (data == "done") {
@@ -284,11 +286,12 @@ $htmlHeaders .= '
     function ChangeLanguage(lang)
     {
         $("#language").val(lang);
+        data = \'{"lang":"\'+sanitizeString(lang)+\'"}\';    		        
         $.post(
             "sources/main.queries.php",
             {
-                type    : "change_user_language",
-                lang    : lang
+                type : "change_user_language",
+                data : prepareExchangedData(data, "encode")
             },
             function(data) {
             	if (data == "done") {
@@ -523,7 +526,7 @@ if (!isset($_GET['page'])) {
     });';
 }
 
-if (!isset($_GET['page']) && isset($_SESSION['key'])) {
+if (!isset($_GET['page']) && isset($_SESSION['key']) && $zim == 1) {
     $htmlHeaders .= '
     $(function() {
         //build nice buttonset
@@ -725,59 +728,6 @@ if (!isset($_GET['page']) && isset($_SESSION['key'])) {
                         function(data) {
                             $("#download_link").html(data[0].text);
                             $("#div_print_out_wait").hide();
-                        },
-                        "json"
-                   );
-                },
-                "'.$txt['cancel_button'].'": function() {
-                    $(this).dialog("close");
-                }
-            }
-        });
-
-        // DIALOG BOX FOR OFF-LINE MODE
-        $("#div_offline_mode").dialog({
-            bgiframe: true,
-            modal: true,
-            autoOpen: false,
-            width: 400,
-            height: 450,
-            title: "'.$txt['offline_menu_title'].'",
-            buttons: {
-                "'.$txt['pw_generate'].'": function() {
-                    //Get list of selected folders
-                    var ids = "";
-                    $("#offline_mode_selected_folders :selected").each(function(i, selected) {
-                        if (ids == "") ids = $(selected).val();
-                        else ids = ids + ";" + $(selected).val();
-                    });
-                    $("#div_offline_mode_wait").show();
-                    $("#offline_mode_error").hide();
-                    $("#offline_download_link").html("");
-
-                    if ($("#offline_password").val() == "") {
-                    	$("#offline_mode_error").show().html("'.$txt['pdf_password_warning'].'").attr("class","ui-state-error");
-                        $("#offline_download_link, #div_offline_mode_wait").hide();
-                        return;
-                    }
-
-                    if ($("#offline_pw_strength_value").val() < $("#min_offline_pw_strength_value").val()) {
-                        $("#offline_mode_error").addClass("ui-state-error ui-corner-all").show().html("'.$txt['error_complex_not_enought'].'");
-                        $("#offline_download_link, #div_offline_mode_wait").hide();
-                        return;
-                    }
-
-                    //Send query
-                    $.post(
-                        "sources/export.queries.php",
-                        {
-                            type    : "export_to_html_format",
-                            ids        : ids,
-                            pdf_password : sanitizeString($("#offline_password").val())
-                        },
-                        function(data) {
-                            $("#offline_download_link").html(data[0].text);
-                            $("#div_offline_mode_wait").hide();
                         },
                         "json"
                    );

@@ -2,9 +2,9 @@
 /**
  *
  * @file          main.queries.php
- * @author        Nils Laumaillé
+ * @author        Nils LaumaillÃ©
  * @version       2.1.19
- * @copyright     (c) 2009-2014 Nils Laumaillé
+ * @copyright     (c) 2009-2014 Nils LaumaillÃ©
  * @licensing     GNU AFFERO GPL 3.0
  * @link          http://www.teampass.net
  *
@@ -45,7 +45,7 @@ require_once $_SESSION['settings']['cpassman_dir'].'/includes/language/'.$_SESSI
 switch ($_POST['type']) {
     case "change_pw":
         // decrypt and retreive data in JSON format
-        $dataReceived = json_decode(Encryption\Crypt\aesctr::decrypt($_POST['data'], $_SESSION['key'], 256), true);
+    	$dataReceived = prepareExchangedData($_POST['data'], "decode");
         // Prepare variables
         $newPw = bCrypt(htmlspecialchars_decode($dataReceived['new_pw']), COST);
         // User has decided to change is PW
@@ -144,7 +144,16 @@ switch ($_POST['type']) {
                    )
             );
             //Send email to user
-            $row = $db->fetchRow("SELECT email FROM ".$pre."users WHERE id=".$dataReceived['user_id']);
+            // $row = $db->fetchRow("SELECT email FROM ".$pre."users WHERE id=".$dataReceived['user_id']);
+            $row = $db->queryGetRow(
+                "users",
+                array(
+                    "email"
+                ),
+                array(
+                    "id" => intval($dataReceived['user_id'])
+                )
+            );
             if (!empty($row[0])) {
                 sendEmail(
                     $txt['forgot_pw_email_subject'],
@@ -193,48 +202,50 @@ switch ($_POST['type']) {
     */
     case "ga_generate_qr":
     	require_once $_SESSION['settings']['cpassman_dir'].'/sources/main.functions.php';
-    	// decrypt and retreive data in JSON format
-    	$dataReceived = prepareExchangedData($_POST['data'], "decode");
-    	// Prepare variables
-    	$passwordClear = htmlspecialchars_decode($dataReceived['pw']);
-    	$username = htmlspecialchars_decode($dataReceived['login']);
 
     	// Check if user exists
-    	$sql = "SELECT id, ga, pw FROM ".$pre."users WHERE login = '".mysql_real_escape_string($username)."'";
-    	$row = $db->query($sql);
-    	if ($row == 0) {
+    	$row = $db->query(
+    		"SELECT login, email
+    		FROM ".$pre."users
+    		WHERE id = '".$_POST['id']."'"
+    	);
+    	$data = $db->fetchArray($row);
+    	if (count($data) == 0) {
     		// not a registered user !
     		echo '[{"error" : "no_user"}]';
     	} else {
-    		// check if good credentials
-    		$data = $db->fetchArray($row);
-    		if (crypt($passwordClear, $data['pw']) == $data['pw']) {
-    			// check if user has already a SECRET
+    		if (empty($data['email'])) {
+    			echo '[{"error" : "no_email"}]';
+    		} else {
+    			// generate new GA user code
     			include_once($_SESSION['settings']['cpassman_dir']."/includes/libraries/Authentication/GoogleAuthenticator/FixedBitNotation.php");
     			include_once($_SESSION['settings']['cpassman_dir']."/includes/libraries/Authentication/GoogleAuthenticator/GoogleAuthenticator.php");
     			$g = new Authentication\GoogleAuthenticator\GoogleAuthenticator();
-    			if (empty($data['ga'])) {
-    				// no SECRET yet
-    				$_SESSION['ga_secret'] = $g->generateSecret();
+    			$gaSecretKey = $g->generateSecret();
 
-    				$db->queryUpdate(
-	    				"users",
-	    				array(
-	    				    'ga' => $_SESSION['ga_secret']
-	    				   ),
-	    				"id = ".$data['id']
-    				);
-    			} else {
-    				// secret exists
-    				$_SESSION['ga_secret'] = $data['ga'];
-    			}
+    			// save the code
+    			$db->queryUpdate(
+	    			"users",
+	    			array(
+	    			    'ga' => $gaSecretKey
+	    			   ),
+	    			"id = ".$_POST['id']
+    			);
+
     			// generate QR url
-    			$gaUrl = $g->getURL($username, $_SESSION['settings']['ga_website_name'], $_SESSION['ga_secret']);
+    			$gaUrl = $g->getURL($data['login'], $_SESSION['settings']['ga_website_name'], $gaSecretKey);
 
+    			// send mail?
+    			if (isset($_POST['send_email']) && $_POST['send_email'] == 1) {
+    				sendEmail (
+    					$txt['email_ga_subject'],
+    					str_replace("#link#", $gaUrl, $txt['email_ga_text']),
+    					$data['email']
+					);
+    			}
+
+    			// send back
     			echo '[{ "error" : "0" , "ga_url" : "'.$gaUrl.'" }]';
-    		} else {
-    			// not good credentials
-    			echo '[{"error" : "bad_couple"}]';
     		}
     	}
     	break;
@@ -243,7 +254,7 @@ switch ($_POST['type']) {
      */
     case "identify_user":
         // decrypt and retreive data in JSON format
-        $dataReceived = json_decode(Encryption\Crypt\aesctr::decrypt($_POST['data'], $_SESSION["key"], 256), true);
+    	$dataReceived = prepareExchangedData($_POST['data'], "decode");
         // Prepare variables
         $passwordClear = htmlspecialchars_decode($dataReceived['pw']);
         $passwordOldEncryption = encryptOld(htmlspecialchars_decode($dataReceived['pw']));
@@ -778,27 +789,36 @@ switch ($_POST['type']) {
         $key = $pwgen->generate();
 
         // Get account and pw associated to email
-        $data = $db->fetchRow(
-            "SELECT COUNT(*) FROM ".$pre."users WHERE email = '".
-            mysql_real_escape_string(stripslashes(($_POST['email'])))."'"
+        $data = $db->queryCount(
+            "users",
+            array(
+                "email" => mysql_real_escape_string(stripslashes($_POST['email']))
+            )
         );
         $textMail = $txt['forgot_pw_email_body_1']." <a href=\"".
             $_SESSION['settings']['cpassman_url']."/index.php?action=password_recovery&key=".$key.
-            "&login=".$_POST['login']."\">".$_SESSION['settings']['cpassman_url'].
-            "/index.php?action=password_recovery&key=".$key."&login=".$_POST['login']."</a>.<br><br>".$txt['thku'];
-        $textMailAlt = $txt['forgot_pw_email_altbody_1']." ".$txt['at_login']." : ".$data['login']." - ".
+            "&login=".mysql_real_escape_string($_POST['login'])."\">".$_SESSION['settings']['cpassman_url'].
+            "/index.php?action=password_recovery&key=".$key."&login=".mysql_real_escape_string($_POST['login'])."</a>.<br><br>".$txt['thku'];
+        $textMailAlt = $txt['forgot_pw_email_altbody_1']." ".$txt['at_login']." : ".mysql_real_escape_string($_POST['login'])." - ".
             $txt['index_password']." : ".md5($data['pw']);
 
         if ($data[0] != 0) {
             $data = $db->fetchArray(
                 "SELECT login,pw FROM ".$pre."users WHERE email = '".
-                mysql_real_escape_string(stripslashes(($_POST['email'])))."'"
+                mysql_real_escape_string(stripslashes($_POST['email']))."'"
             );
 
             // Check if email has already a key in DB
-            $data = $db->fetchRow(
-                "SELECT COUNT(*) FROM ".$pre."misc WHERE intitule = '".
-                $_POST['login']."' AND type = 'password_recovery'"
+            //$data = $db->fetchRow(
+            //    "SELECT COUNT(*) FROM ".$pre."misc WHERE intitule = '".
+            //    mysql_real_escape_string($_POST['login'])."' AND type = 'password_recovery'"
+            //);
+            $data = $db->queryCount(
+                "misc",
+                array(
+                    "intitule" => $_POST['login'],
+                    "type" => "password_recovery"
+                )
             );
             if ($data[0] != 0) {
                 $db->queryUpdate(
@@ -808,7 +828,7 @@ switch ($_POST['type']) {
                     ),
                     array(
                             'type' => 'password_recovery',
-                            'intitule' => $_POST['login']
+                            'intitule' => mysql_real_escape_string($_POST['login'])
                     )
                 );
             } else {
@@ -817,7 +837,7 @@ switch ($_POST['type']) {
                     'misc',
                     array(
                             'type' => 'password_recovery',
-                            'intitule' => $_POST['login'],
+                            'intitule' => mysql_real_escape_string($_POST['login']),
                             'valeur' => $key
                     )
                 );
@@ -831,12 +851,27 @@ switch ($_POST['type']) {
         break;
     // Send to user his new pw if key is conform
     case "generate_new_password":
+        // decrypt and retreive data in JSON format
+        $dataReceived = prepareExchangedData($_POST['data'], "decode");
+        // Prepare variables
+        $login = htmlspecialchars_decode($dataReceived['login']);
+        $key = htmlspecialchars_decode($dataReceived['key']);
         // check if key is okay
-        $data = $db->fetchRow(
+        /*$data = $db->fetchRow(
             "SELECT valeur FROM ".$pre."misc WHERE intitule = '".
-            $_POST['login']."' AND type = 'password_recovery'"
+            mysql_real_escape_string($login)."' AND type = 'password_recovery'"
+        );*/
+        $data = $db->queryGetRow(
+            "misc",
+            array(
+                "valeur"
+            ),
+            array(
+                "type" => "password_recovery",
+                "intitule" => $login
+            )
         );
-        if ($_POST['key'] == $data[0]) {
+        if ($key == $data[0]) {
             //Load PWGEN
             $pwgen = new SplClassLoader('Encryption\PwGen', '../includes/libraries');
             $pwgen->register();
@@ -858,19 +893,19 @@ switch ($_POST['type']) {
                 array(
                     'pw' => $newPw
                    ),
-                "login = '".$_POST['login']."'"
+                "login = '".mysql_real_escape_string($login)."'"
             );
             // Delete recovery in DB
             $db->queryDelete(
                 "misc",
                 array(
                     'type' => 'password_recovery',
-                    'intitule' => $_POST['login'],
+                    'intitule' => mysql_real_escape_string($login),
                     'valeur' => $key
                    )
             );
             // Get email
-            $dataUser = $db->queryFirst("SELECT email FROM ".$pre."users WHERE login = '".$_POST['login']."'");
+            $dataUser = $db->queryFirst("SELECT email FROM ".$pre."users WHERE login = '".mysql_real_escape_string($login)."'");
 
             $_SESSION['validite_pw'] = false;
             // send to user
@@ -1016,18 +1051,22 @@ switch ($_POST['type']) {
      */
     case "change_user_language":
         if (!empty($_SESSION['user_id'])) {
+            // decrypt and retreive data in JSON format
+            $dataReceived = prepareExchangedData($_POST['data'], "decode");
+            // Prepare variables
+            $language = $dataReceived['lang'];
             // update DB
             $db->queryUpdate(
                 "users",
                 array(
-                    'user_language' => $_POST['lang']
+                    'user_language' => $language
                    ),
                 "id = ".$_SESSION['user_id']
             );
-            $_SESSION['user_language'] = $_POST['lang'];
+            $_SESSION['user_language'] = $language;
         	echo "done";
         } else {
-            $_SESSION['user_language'] = $_POST['lang'];
+            $_SESSION['user_language'] = $language;
             echo "done";
         }
         break;
@@ -1123,26 +1162,60 @@ switch ($_POST['type']) {
      * Generate a password generic
      */
     case "generate_a_password":
+    	if ($_POST['size'] > $_SESSION['settings']['pwd_maximum_length']) {
+    		echo prepareExchangedData(
+	    		array(
+		    		"error_msg" => "Password length is too long!",
+		    		"error" => "true"
+	    		),
+	    		"encode"
+    		);
+    		break;
+    	}
+
         //Load PWGEN
         $pwgen = new SplClassLoader('Encryption\PwGen', '../includes/libraries');
         $pwgen->register();
         $pwgen = new Encryption\PwGen\pwgen();
-        //Generate
-        $pwgen->setLength($_POST['length']);
-        $pwgen->setSecure($_POST['secure']);
-        $pwgen->setSymbols($_POST['symbols']);
-        $pwgen->setCapitalize($_POST['capitalize']);
-        $pwgen->setNumerals($_POST['numerals']);
 
-        echo Encryption\Crypt\aesctr::encrypt($pwgen->generate(), $_SESSION['key'], 256);
+    	$pwgen->setLength($_POST['size']);
+    	if (isset($_POST['secure']) && $_POST['secure'] == "true") {
+    		$pwgen->setSecure(true);
+    		$pwgen->setSymbols(true);
+    		$pwgen->setCapitalize(true);
+    		$pwgen->setNumerals(true);
+    	} else {
+    		$pwgen->setSecure(($_POST['secure'] == "true")? true : false);
+    		$pwgen->setNumerals(($_POST['numerals'] == "true")? true : false);
+    		$pwgen->setCapitalize(($_POST['capitalize'] == "true")? true : false);
+    		$pwgen->setSymbols(($_POST['symbols'] == "true")? true : false);
+    	}
+
+        echo prepareExchangedData(
+        	array(
+	        	"key" => $pwgen->generate(),
+	        	"error" => ""
+        	),
+        	"encode"
+        );
         break;
     /**
      * Check if user exists and send back if psk is set
      */
     case "check_login_exists":
-        $sql = "SELECT * FROM ".$pre."users WHERE login = '".addslashes($_POST['userId'])."'";
+        /*$sql = "SELECT * FROM ".$pre."users WHERE login = '".addslashes($_POST['userId'])."'";
         $row = $db->query($sql);
-        $data = $db->fetchArray($row);
+        $data = $db->fetchArray($row);*/
+        $data = $db->queryGetArray(
+            "users",
+            array(
+                "login",
+                "psk"
+            ),
+            array(
+                "login" => $_POST['userId']
+            )
+        );
         if (empty($data['login'])) {
             $userOk = false;
         } else {

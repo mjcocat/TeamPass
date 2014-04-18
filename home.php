@@ -73,7 +73,14 @@ if (empty($_SESSION['last_pw_change']) || $_SESSION['validite_pw'] == false) {
         $cpt=1;
         $rows = $db->fetchAllArray($sql);
         foreach ($rows as $record) {
-            $data = $db->fetchRow("SELECT COUNT(*) FROM ".$pre."log_items WHERE id_item = '".$record['id']."' AND action = 'at_delete'");
+            //$data = $db->fetchRow("SELECT COUNT(*) FROM ".$pre."log_items WHERE id_item = '".$record['id']."' AND action = 'at_delete'");
+            $data = $db->queryCount(
+                "log_items",
+                array(
+                    "id_item" => intval($record['id']),
+                    "action" => "at_delete"
+                )
+            );
             if ($data[0] == 0) {
                 echo '<span class="ui-icon ui-icon-tag" style="float: left; margin-right: .3em;">&nbsp;</span>
                 <a href="#" onClick="javascript:$(\'#menu_action\').val(\'action\');window.location.href =\'index.php?page=items&amp;group='.$record['id_tree'].'&amp;id='.$record['id'].'\';" style="cursor:pointer;">'.stripslashes($record['label']).'</a><br />';
@@ -328,6 +335,8 @@ if (empty($_SESSION['last_pw_change']) || $_SESSION['validite_pw'] == false) {
 						</div>
                         <div id="offline_download_link" style="text-align:center; width:100%; margin-top:15px;">&nbsp;</div>
                         <div style="text-align:center;margin-top:8px; display:none;" id="div_offline_mode_wait"><img src="includes/images/ajax-loader.gif" /></div>
+						<input type="hidden" id="offmode_number" />
+						<input type="hidden" id="offmode_list" />
                     </div>
                 </div>';
 	}
@@ -335,4 +344,4 @@ if (empty($_SESSION['last_pw_change']) || $_SESSION['validite_pw'] == false) {
 echo '
             </div>';
 
-//require_once 'home.load.php';
+require_once 'home.load.php';

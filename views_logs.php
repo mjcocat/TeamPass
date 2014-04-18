@@ -15,8 +15,20 @@
 require_once('sources/sessions.php');
 session_start();
 
-if (!isset($_SESSION['CPM']) || $_SESSION['CPM'] != 1) {
+if (
+    !isset($_SESSION['CPM']) || $_SESSION['CPM'] != 1 || 
+    !isset($_SESSION['user_id']) || empty($_SESSION['user_id']) || 
+    !isset($_SESSION['key']) || empty($_SESSION['key'])) 
+{
     die('Hacking attempt...');
+}
+
+/* do checks */
+require_once $_SESSION['settings']['cpassman_dir'].'/sources/checks.php';
+if (!checkUser($_SESSION['user_id'], $_SESSION['key'], "manage_views")) {
+    $_SESSION['error']['code'] = ERR_NOT_ALLOWED; //not allowed page
+    include 'error.php';
+    exit();
 }
 
 include $_SESSION['settings']['cpassman_dir'].'/includes/language/'.$_SESSION['user_language'].'.php';
@@ -102,10 +114,9 @@ echo '
             <div style="margin:10px auto 25px auto;min-height:250px;" id="t_admin_page">
                 <table id="t_admin" cellspacing="0" cellpadding="5" width="100%">
                     <thead><tr>
-                        <th style="width-max:38px;">'.$txt['date'].'</th>
-                        <th style="width:40%;">'.$txt['user'].'</th>
-                        <th style="width:20%;">'.$txt['role'].'</th>
-                        <th style="width:20%;">'.$txt['login_time'].'</th>
+                        <th style="width:30%;">'.$txt['date'].'</th>
+                        <th style="width:30%;">'.$txt['user'].'</th>
+                        <th style="width:40%;">'.$txt['action'].'</th>
                     </tr></thead>
                     <tbody>
                         <tr><td></td></tr>
@@ -135,5 +146,6 @@ echo '
             <label for="purgeTo">'.$txt['to'].'</label>
             <input type="text" id="purgeTo" name="purgeTo" />
             <input type="button" id="butPurge" value="'.$txt['purge_now'].'" />
+            <span id="purge_result"></span>
         </div>' : '', '
     </div>';

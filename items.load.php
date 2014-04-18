@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * @file          items.load.php
  * @author        Nils Laumaillé
@@ -45,7 +45,7 @@ if (!isset($_SESSION['CPM']) || $_SESSION['CPM'] != 1) {
                                                 .replace(/\r/g, '');
         }
         return input;
-    }
+    }/* */
 
     function AddNewNode()
     {
@@ -92,37 +92,38 @@ if (!isset($_SESSION['CPM']) || $_SESSION['CPM'] != 1) {
     //Showh the password in new form
     function ShowPasswords_Form()
     {
-        if ($('#pw1').is(":visible")) {
-            $('#pw1').hide();
-            $('#pw1_txt').show();
-        } else {
-            $('#pw1').show();
-            $('#pw1_txt').hide();
-        }
+		if ($('#visible_pw').is(":visible")) {
+			$('#visible_pw').hide();
+		} else {
+			$('#visible_pw').show();
+		}
     }
-    $('#pw1').change(function() {
-        $('#pw1_txt').val($('#pw1').val());
-    });
-    $('#pw1_txt').change(function() {
-        $('#pw1').val($('#pw1_txt').val());
-    });
+    $("#tabs-02").on(
+        "change",
+        "#pw1",
+        function() {
+            $('#visible_pw').val($('#pw1').val());
+        }
+    );
 
     function ShowPasswords_EditForm()
     {
-        if ($('#edit_pw1').is(":visible")) {
-            $('#edit_pw1').hide();
-            $('#edit_pw1_txt').show();
-        } else {
-            $('#edit_pw1').show();
-            $('#edit_pw1_txt').hide();
-        }
+		if ($('#visible_editpw').is(":visible")) {
+			$('#visible_editpw').hide();
+		} else {
+			$('#visible_editpw').show();
+		}
     }
-    $('#edit_pw1').change(function() {
-        $('#edit_pw1_txt').val($('#edit_pw1').val());
-    });
-    $('#edit_pw1_txt').change(function() {
-        $('#edit_pw1').val($('#edit_pw1_txt').val());
-    });
+
+	$("#edit_pw1").keyup(function() {
+	    $("#visible_editpw").text( this.value );
+	});
+
+	$("#pw1").keyup(function() {
+	    $("#visible_pw").text( this.value );
+	});
+
+
 
     /**
      * Open a dialogbox
@@ -181,7 +182,7 @@ function ListerItems(groupe_id, restricted, start)
                 data = prepareExchangedData(data, "decode");
 
                 // display path of folders
-                $("#items_path_var").html(data.arborescence);
+				$("#items_path_var").html(data.arborescence);
 
                 // store the categories to be displayed
                 $("#display_categories").val(data.displayCategories);
@@ -265,11 +266,18 @@ function ListerItems(groupe_id, restricted, start)
                     if (restricted == 1) {
                         $("#menu_button_add_item").attr('disabled', 'disabled');
                     } else {
-                        $("#menu_button_add_item").removeAttr('disabled');
+                        $("#menu_button_add_item").prop('disabled', false);
                     }
                     $("#menu_button_copy_item").attr('disabled', 'disabled');
 
-                    $("#menu_button_copy_item, #menu_button_add_group, #menu_button_edit_group, #menu_button_del_group, #menu_button_add_item, #menu_button_edit_item, #menu_button_del_item").removeAttr("disabled");
+                    $("#menu_button_copy_item, #menu_button_edit_group, #menu_button_del_group, #menu_button_add_item, #menu_button_edit_item, #menu_button_del_item").prop("disabled", false);
+
+					// if PF folder, then diable menu create folder
+					if ($('#recherche_group_pf').val() == "1") {
+						$("#menu_button_add_group").prop("disabled", true);
+					} else {
+						$("#menu_button_add_group").prop("disabled", false);
+					}
 
                     //If no data then empty
                     if (data.array_items != null) {
@@ -325,14 +333,15 @@ function ListerItems(groupe_id, restricted, start)
 function pwGenerate(elem)
 {
     if (elem != "") elem = elem+"_";
+    $("#pw1").show();
 
     //show ajax image
     $("#"+elem+"pw_wait").show();
 
     $.post(
-        "sources/items.queries.php",
+        "sources/main.queries.php",
         {
-            type    : "pw_generate",
+            type    : "generate_a_password",
             size      : $("#"+elem+'pw_size').val(),
             num      : $("#"+elem+'pw_numerics').prop("checked"),
             maj      : $("#"+elem+'pw_maj').prop("checked"),
@@ -342,8 +351,14 @@ function pwGenerate(elem)
             force      : "false"
         },
         function(data) {
-        	data = prepareExchangedData(data, "decode");
-            $("#"+elem+"pw1, #"+elem+"pw1_txt").val(data.key).focus();
+			data = prepareExchangedData(data, "decode");
+           	if (data.error == "true") {
+           		$("#div_dialog_message_text").html(data.error_msg);
+           		$("#div_dialog_message").dialog("open");
+           	} else {
+           		$("#"+elem+"pw1").val(data.key).focus();
+				$("#visible_pw").text(data.key);
+           	}
             $("#"+elem+"pw_wait").hide();
         }
    );
@@ -577,7 +592,7 @@ function AjouterItem()
                         AfficherDetailsItem(data.new_id);
 
                         //empty form
-                        $("#label, #item_login, #email, #url, #pw1, #pw1_txt, #pw2, #item_tags, #deletion_after_date, #times_before_deletion").val("");
+                        $("#label, #item_login, #email, #url, #pw1, #visible_pw, #pw2, #item_tags, #deletion_after_date, #times_before_deletion, #mypassword_complex").val("");
                         CKEDITOR.instances["desc"].setData("");
                         //$("#restricted_to_list").multiselect('uncheckall');TODO
                         $("#item_tabs").tabs({selected: 0});
@@ -701,7 +716,7 @@ function EditerItem()
               //prepare data
             var data = '{"pw":"'+sanitizeString($('#edit_pw1').val())+'", "label":"'+sanitizeString($('#edit_label').val())+'", '+
             '"login":"'+sanitizeString($('#edit_item_login').val())+'", "is_pf":"'+is_pf+'", '+
-            '"description":"'+description+'", "email":"'+$('#edit_email').val()+'", "url":"'+url+'", "categorie":"'+$('#edit_categorie').val()+'", '+
+            '"description":"'+description+'", "email":"'+$('#edit_email').val()+'", "url":"'+url+'", "categorie":"'+$("#edit_categorie option:selected").val()+'", '+
             '"restricted_to":"'+restriction+'", "restricted_to_roles":"'+restriction_role+'", "salt_key_set":"'+$('#personal_sk_set').val()+'", "is_pf":"'+$('#recherche_group_pf').val()+'", '+
             '"annonce":"'+annonce+'", "diffusion":"'+diffusion+'", "id":"'+$('#id_item').val()+'", '+
             '"anyone_can_modify":"'+$('#edit_anyone_can_modify:checked').val()+'", "tags":"'+sanitizeString($('#edit_tags').val())+'" ,'+
@@ -851,7 +866,7 @@ function AddNewFolder()
 
         //prepare data
         var data = '{"title":"'+sanitizeString($('#new_rep_titre').val())+'", "complexity":"'+sanitizeString($('#new_rep_complexite').val())+'", '+
-        '"parent_id":"'+sanitizeString($('#new_rep_groupe').val())+'", "renewal_period":"0"}';
+        '"parent_id":"'+$("#new_rep_groupe option:selected").val()+'", "renewal_period":"0"}';
 
         //send query
         $.post(
@@ -872,7 +887,7 @@ function AddNewFolder()
                 }
             },
             "json"
-       );
+       	);
     }
 }
 
@@ -919,7 +934,7 @@ function AfficherDetailsItem(id, salt_key_required, expired_item, restricted, di
         $("#item_details_ok").hide();
         $("#item_details_expired").hide();
         $("#item_details_expired_full").hide();
-        $("#menu_button_edit_item, #menu_button_del_item, #menu_button_copy_item, #menu_button_add_fav, #menu_button_del_fav, #menu_button_show_pw, #menu_button_copy_pw, #menu_button_copy_login, #menu_button_copy_link").attr("disabled","disabled");
+        $("#menu_button_edit_item, #menu_button_del_item, #menu_button_copy_item, #menu_button_add_fav, #menu_button_del_fav, #menu_button_show_pw, #menu_button_copy_pw, #menu_button_copy_login, menu_button_copy_url, #menu_button_copy_link").attr("disabled","disabled");
         $("#request_ongoing").val("");
         return false;
     }
@@ -1088,21 +1103,21 @@ function AfficherDetailsItem(id, salt_key_required, expired_item, restricted, di
                         } else if (data.user_can_modify == 0) {
                             $('#menu_button_edit_item, #menu_button_del_item, #menu_button_copy_item').attr('disabled', 'disabled');
                         } else if (data.restricted == "1" || data.user_can_modify == "1") {
-                            //$("#menu_button_edit_item, #menu_button_del_item, #menu_button_copy_item").removeAttr("disabled");
+                            //$("#menu_button_edit_item, #menu_button_del_item, #menu_button_copy_item").prop("disabled", false);
 							var param = "#menu_button_edit_item, #menu_button_del_item, #menu_button_copy_item";
                             $("#new_history_entry_form").show();
                         } else {
-                            //$("#menu_button_add_item, #menu_button_copy_item").removeAttr("disabled");
+                            //$("#menu_button_add_item, #menu_button_copy_item").prop("disabled", false);
 							var param = "#menu_button_del_item, #menu_button_copy_item";
                             $("#new_history_entry_form").show();
                         }
-                        //$("#menu_button_show_pw, #menu_button_copy_pw, #menu_button_copy_login, #menu_button_copy_link, #menu_button_history").removeAttr("disabled");
+                        //$("#menu_button_show_pw, #menu_button_copy_pw, #menu_button_copy_login, #menu_button_copy_link, #menu_button_history").prop("disabled", false);
 
                         // disable share button for personal folder
                         if ($("#recherche_group_pf").val() == 1) {
             		        $("#menu_button_share").attr('disabled', 'disabled');
             		    } else {
-            		    	$("#menu_button_share").removeAttr('disabled');
+            		    	$("#menu_button_share").prop("disabled", false);
             		    }
 
                         //Manage to deleted information
@@ -1114,13 +1129,13 @@ function AfficherDetailsItem(id, salt_key_required, expired_item, restricted, di
 
                         if (data.notification_status == 0 && data.id_user == <?php echo $_SESSION['user_id'];?>) {
                             $('#menu_button_notify')
-                                .removeAttr("disabled")
+                                .prop("disabled", false)
                                 .attr('title','<?php echo $txt['enable_notify'];?>')
                                 .attr('onclick','notify_click(\'true\')');
                             $('#div_notify').attr('src', '<?php echo $_SESSION['settings']['cpassman_url'];?>/includes/images/alarm-clock-plus.png');
                         } else if (data.notification_status == 1 && data.id_user == <?php echo $_SESSION['user_id'];?>) {
                             $('#menu_button_notify')
-                                .removeAttr("disabled")
+                                .prop("disabled", false)
                                 .attr('title','<?php echo $txt['disable_notify'];?>')
                                 .attr('onclick','notify_click(\'false\')');
                             $('#div_notify').attr('src', '<?php echo $_SESSION['settings']['cpassman_url'];?>/includes/images/alarm-clock-minus.png');
@@ -1146,6 +1161,15 @@ function AfficherDetailsItem(id, salt_key_required, expired_item, restricted, di
                                     $("#message_box").html("<?php echo addslashes($txt['login_copied_clipboard']);?>").show().fadeOut(1000);
                             });
                             clip.glue('menu_button_copy_login');
+                        }
+                        // #XXX
+                        if (data.url != "") {
+                            var clip = new ZeroClipboard.Client();
+                            clip.setText(data.url);
+                            clip.addEventListener('complete', function(client, text) {
+                                    $("#message_box").html("<?php echo addslashes($txt['url_copied_clipboard']);?>").show().fadeOut(1000);
+                            });
+                            clip.glue('menu_button_copy_url');
                         }
                         //prepare link to clipboard
                         var clip = new ZeroClipboard.Client();
@@ -1232,14 +1256,14 @@ function showDetailsStep2(id, param)
             //Set favourites icon
             if (data.favourite == "1") {
                 $("#menu_button_add_fav").attr("disabled","disabled");
-                $("#menu_button_del_fav").removeAttr("disabled");
+                $("#menu_button_del_fav").prop("disabled", false);
             } else {
-                $("#menu_button_add_fav").removeAttr("disabled");
+                $("#menu_button_add_fav").prop("disabled", false);
                 $("#menu_button_del_fav").attr("disabled","disabled");
             }
 
-			$(param).removeAttr("disabled");
-			$("#menu_button_show_pw, #menu_button_copy_pw, #menu_button_copy_login, #menu_button_copy_link, #menu_button_history").removeAttr("disabled");
+			$(param).prop("disabled", false);
+			$("#menu_button_show_pw, #menu_button_copy_pw, #menu_button_copy_login, #menu_button_copy_link, #menu_button_history").prop("disabled", false);
 			$("#div_loading").hide();
 	     }
 	 );
@@ -1275,7 +1299,7 @@ function ActionOnQuickIcon(id, action)
 //###########
 function open_add_group_div()
 {
-    //Select the actual forlder in the dialogbox
+    //Select the actual folder in the dialogbox
     $('#new_rep_groupe').val($('#hid_cat').val());
     $('#div_ajout_rep').dialog('open');
 }
@@ -1285,6 +1309,13 @@ function open_add_group_div()
 //###########
 function open_edit_group_div()
 {
+	// disable folder selection if PF
+	if ($('#recherche_group_pf').val() == "1") {
+		$("#edit_folder_folder").prop("disabled", true);
+	} else {
+		$("#edit_folder_folder").prop("disabled", false);
+	}
+
     //Select the actual forlder in the dialogbox
     $('#edit_folder_folder').val($('#hid_cat').val());
     $('#edit_folder_title').val($.trim($('#edit_folder_folder :selected').text()));
@@ -1297,6 +1328,13 @@ function open_edit_group_div()
 //###########
 function open_del_group_div()
 {
+	// if PF folder, then not allowed to delete
+	if ($('#recherche_group_pf').val() == "1") {
+		$("#delete_rep_groupe").prop("disabled", true);
+	} else {
+		$("#delete_rep_groupe").prop("disabled", false);
+	}
+
     $('#delete_rep_groupe').val($('#hid_cat').val());
     $('#div_supprimer_rep').dialog('open');
 }
@@ -1393,7 +1431,8 @@ function open_edit_item_div(restricted_to_roles)
     $('#edit_display_title').html($('#hid_label').val());
     $('#edit_label').val($('#hid_label').val());
     $('#edit_desc').html($('#hid_desc').val());
-    $('#edit_pw1, #edit_pw1_txt, #edit_pw2').val($('#hid_pw').val());
+    $('#edit_pw1, #edit_pw2').val($('#hid_pw').val());
+	$("#visible_editpw").text($('#hid_pw').val());
     $('#edit_item_login').val($('#hid_login').val());
     $('#edit_email').val($('#hid_email').val());
     $('#edit_url').val($('#hid_url').val());
@@ -1479,6 +1518,13 @@ function open_edit_item_div(restricted_to_roles)
         });
         $("#edit_restricted_to_list").multiselect('refresh');
     }
+
+	// disable folder selection if PF
+	if ($('#recherche_group_pf').val() == "1") {
+		$("#edit_categorie").prop("disabled", true);
+	} else {
+		$("#edit_categorie").prop("disabled", false);
+	}
 
     //open dialog
     $("#div_formulaire_edition_item_info").hide().html("");
@@ -1904,6 +1950,7 @@ $(function() {
             }
             $("#item_upload_list").html("");
             $(".item_field").val("");  // clean values in Fields
+            $("#pw1").focus();
             $("#div_loading").hide();
         }
     });
@@ -2272,8 +2319,8 @@ if ($_SESSION['settings']['upload_imageresize_options'] == 1) {
     //Password meter for item creation
     $("#pw1").simplePassMeter({
         "requirements": {},
-          "container": "#pw_strength",
-          "defaultText" : "<?php echo $txt['index_pw_level_txt'];?>",
+        "container": "#pw_strength",
+        "defaultText" : "<?php echo $txt['index_pw_level_txt'];?>",
         "ratings": [
             {"minScore": 0,
                 "className": "meterFail",
@@ -2305,11 +2352,19 @@ if ($_SESSION['settings']['upload_imageresize_options'] == 1) {
             }
         ]
     });
-    $('#pw1').bind({
+    /*$('#pw1').bind({
         "score.simplePassMeter" : function(jQEvent, score) {
             $("#mypassword_complex").val(score);
         }
-    });
+    });*/
+    $("#tabs-02").on(
+	    "score.simplePassMeter",
+	    "#pw1",
+	    function(jQEvent, score) {
+    	    $("#mypassword_complex").val(score);
+    	}
+	);
+
 
     //Password meter for item update
     $("#edit_pw1").simplePassMeter({
@@ -2500,6 +2555,34 @@ function displayHistory()
                 $("#item_history_log").html(htmlspecialchars_decode(data.historique));
             } else {
                 $("#item_history_log_error").html(data[0].error).show();
+            }
+            $("#div_item_history").dialog("open");
+        }
+   );
+}
+
+function manage_history_entry(type, id)
+{
+	var data = '{"item_id":"'+$("#id_item").val()+'", "label":"'+sanitizeString($('#add_history_entry_label').val())+'"}';
+
+	//Send query
+    $.post(
+        "sources/items.queries.php",
+        {
+            type      : "history_entry_add",
+            folder_id           : $('#hid_cat').val(),
+            data     : prepareExchangedData(data, "encode"),
+            key        : "<?php echo $_SESSION['key'];?>"
+        },
+        function(data) {
+            //check if format error
+            data = prepareExchangedData(data, "decode");
+            if (data.error == "") {
+                $("#item_history_log_error").html("").hide();
+                $("#add_history_entry_label").val("");
+                $("#item_history_log").append(htmlspecialchars_decode(data.new_line));
+            } else {
+                $("#item_history_log_error").html(data.error).show();
             }
             $("#div_item_history").dialog("open");
         }
